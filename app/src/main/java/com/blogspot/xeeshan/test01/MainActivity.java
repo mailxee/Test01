@@ -22,10 +22,12 @@ public class MainActivity extends ActionBarActivity
         ArrayAdapter<String> myArrayAdapter=
                 new CustomArrayAdapter<>(this, R.layout.listview_item_complex, R.id.textView);
         //populate the array adapter
-        for (int i=0;i<100;++i)
-            myArrayAdapter.add("String number " + i);
+//        for (int i=0;i<100;++i)
+//            myArrayAdapter.add("String number " + i);
         //attach the array adapter to the list view
         myListView.setAdapter(myArrayAdapter);
+        FetchWeather myFetchWeather=new FetchWeather(myArrayAdapter);
+        myFetchWeather.execute();
     }
 
     @Override
