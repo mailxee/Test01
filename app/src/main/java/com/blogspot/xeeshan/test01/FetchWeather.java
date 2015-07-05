@@ -4,6 +4,7 @@ import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.ArrayAdapter;
 
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -14,14 +15,15 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Date;
 
 /**
  * Created by Zeeshan on 04/07/2015.
  */
 public class FetchWeather extends AsyncTask<Void,Void,String>
 {
-    private ArrayAdapter myArrayAdapter;
-    FetchWeather(ArrayAdapter myArrayAdapter)
+    private ArrayAdapter<String> myArrayAdapter;
+    FetchWeather(ArrayAdapter<String> myArrayAdapter)
     {
         super();
         this.myArrayAdapter=myArrayAdapter;
@@ -30,19 +32,28 @@ public class FetchWeather extends AsyncTask<Void,Void,String>
     @Override
     protected void onPostExecute(String result)
     {
+        //myArrayAdapter.addOpenWeatherJSON(result);
         try
         {
-            JSONObject weather = new JSONObject(result);
+
+            JSONObject weather;
+            weather = new JSONObject(result);
             JSONArray days = weather.getJSONArray("list");
-            for (int i = 0; i < 7; ++i)
+            int limit=days.length();
+            Log.d("Limit is",Integer.toString(limit));
+            for (int i = 0; i < limit; ++i)
             {
                 JSONObject dayInfo = days.getJSONObject(i);
                 JSONObject temperatureInfo = dayInfo.getJSONObject("temp");
+                Date curDate=new Date (dayInfo.getLong("dt")*1000);
+                //String curDateStr=curDate.toString();
+                //"yyyy-MM-dd hh:mm:ss"
+                String curDateStr= (String) android.text.format.DateFormat.format("dd MMM yyyy", curDate);
                 myArrayAdapter.add
                         (
-                                "Day= " + i +
+                                ("Day= " + curDateStr +
                                         " Max= " + temperatureInfo.getDouble("max") +
-                                        " Min= " + temperatureInfo.getDouble("min")
+                                        " Min= " + temperatureInfo.getDouble("min"))
                         );
             }
         }
@@ -53,6 +64,8 @@ public class FetchWeather extends AsyncTask<Void,Void,String>
 
 //        myArrayAdapter.add(result);
         myArrayAdapter.notifyDataSetChanged();
+
+
     }
     @Override
     protected String doInBackground(Void... params)
