@@ -6,7 +6,6 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
-
 /**
  * Created by Zeeshan on 21/06/2015.
  */
@@ -46,8 +45,5 @@ public class CustomArrayAdapter<String> extends ArrayAdapter <String>
         {
             this.textView_01=textView_01;
         }
-    }
-    public void addOpenWeatherJSON (String result)
-    {
     }
 }
