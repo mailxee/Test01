@@ -1,15 +1,25 @@
 package com.blogspot.xeeshan.test01;
 
-import android.app.Application;
-import android.test.ApplicationTestCase;
+import static org.junit.Assert.assertEquals;
+
+import android.content.Context;
+
+import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
- * <a href="http://d.android.com/tools/testing/testing_android.html">Testing Fundamentals</a>
+ * Instrumented test, which runs on an Android device or emulator.
  */
-public class ApplicationTest extends ApplicationTestCase<Application>
+@RunWith(AndroidJUnit4.class)
+public class ApplicationTest
 {
-    public ApplicationTest()
+    @Test
+    public void useAppContext()
     {
-        super(Application.class);
+        Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
+        assertEquals("com.blogspot.xeeshan.test01", appContext.getPackageName());
     }
 }
