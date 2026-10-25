@@ -36,6 +36,9 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation 'androidx.appcompat:appcompat:1.7.0'
+    // Align kotlin-stdlib-jdk7/jdk8 (pulled in transitively at 1.6.x) with kotlin-stdlib 1.8,
+    // otherwise checkDebugDuplicateClasses fails.
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
 
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test:runner:1.6.2'
