@@ -10,6 +10,10 @@ android {
         targetSdkVersion 21
         versionCode 1
         versionName "1.0"
+        // OpenWeatherMap API key: set OWM_API_KEY in ~/.gradle/gradle.properties
+        // or as an environment variable. Never commit the key itself.
+        def owmApiKey = project.hasProperty('OWM_API_KEY') ? project.property('OWM_API_KEY') : (System.getenv('OWM_API_KEY') ?: '')
+        buildConfigField "String", "OWM_API_KEY", "\"${owmApiKey}\""
     }
     buildTypes {
         release {

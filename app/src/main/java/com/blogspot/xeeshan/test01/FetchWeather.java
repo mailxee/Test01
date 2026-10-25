@@ -1,5 +1,6 @@
 package com.blogspot.xeeshan.test01;
 
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.ArrayAdapter;
@@ -16,12 +17,17 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Created by Zeeshan on 04/07/2015.
  */
 public class FetchWeather extends AsyncTask<Void,Void,String>
 {
+    private static final String LOG_TAG = "FetchWeather";
+    private static final String CITY = "karachi";
+
     private ArrayAdapter<String> myArrayAdapter;
     FetchWeather(ArrayAdapter<String> myArrayAdapter)
     {
@@ -32,37 +38,57 @@ public class FetchWeather extends AsyncTask<Void,Void,String>
     @Override
     protected void onPostExecute(String result)
     {
-        //myArrayAdapter.addOpenWeatherJSON(result);
+        if (result == null)
+        {
+            myArrayAdapter.add("Could not load weather. Check your connection and API key.");
+            myArrayAdapter.notifyDataSetChanged();
+            return;
+        }
         try
         {
-
-            JSONObject weather;
-            weather = new JSONObject(result);
-            JSONArray days = weather.getJSONArray("list");
-            int limit=days.length();
+            // The free forecast endpoint returns 3-hourly entries, so group them
+            // by day and keep each day's lowest min and highest max.
+            // LinkedHashMap keeps the days in the order they arrive.
+            Map<String, double[]> dayMinMax = new LinkedHashMap<>();
+            JSONObject weather = new JSONObject(result);
+            JSONArray entries = weather.getJSONArray("list");
+            int limit=entries.length();
             Log.d("Limit is",Integer.toString(limit));
             for (int i = 0; i < limit; ++i)
             {
-                JSONObject dayInfo = days.getJSONObject(i);
-                JSONObject temperatureInfo = dayInfo.getJSONObject("temp");
-                Date curDate=new Date (dayInfo.getLong("dt")*1000);
-                //String curDateStr=curDate.toString();
-                //"yyyy-MM-dd hh:mm:ss"
-                String curDateStr= (String) android.text.format.DateFormat.format("dd MMM yyyy", curDate);
+                JSONObject entry = entries.getJSONObject(i);
+                JSONObject temperatureInfo = entry.getJSONObject("main");
+                Date curDate=new Date (entry.getLong("dt")*1000);
+                String curDateStr= android.text.format.DateFormat.format("dd MMM yyyy", curDate).toString();
+                double min = temperatureInfo.getDouble("temp_min");
+                double max = temperatureInfo.getDouble("temp_max");
+                double[] minMax = dayMinMax.get(curDateStr);
+                if (minMax == null)
+                {
+                    dayMinMax.put(curDateStr, new double[]{min, max});
+                }
+                else
+                {
+                    minMax[0] = Math.min(minMax[0], min);
+                    minMax[1] = Math.max(minMax[1], max);
+                }
+            }
+            for (Map.Entry<String, double[]> day : dayMinMax.entrySet())
+            {
                 myArrayAdapter.add
                         (
-                                ("Day= " + curDateStr +
-                                        " Max= " + temperatureInfo.getDouble("max") +
-                                        " Min= " + temperatureInfo.getDouble("min"))
+                                ("Day= " + day.getKey() +
+                                        " Max= " + day.getValue()[1] +
+                                        " Min= " + day.getValue()[0])
                         );
             }
         }
         catch (JSONException e)
         {
-            Log.e("PlaceholderFragment", "Error parsing JSON string", e);
+            Log.e(LOG_TAG, "Error parsing JSON string", e);
+            myArrayAdapter.add("Could not read the weather data.");
         }
 
-//        myArrayAdapter.add(result);
         myArrayAdapter.notifyDataSetChanged();
 
 
@@ -70,6 +96,12 @@ public class FetchWeather extends AsyncTask<Void,Void,String>
     @Override
     protected String doInBackground(Void... params)
     {
+        if (BuildConfig.OWM_API_KEY.isEmpty())
+        {
+            Log.e(LOG_TAG, "No OpenWeatherMap API key; set OWM_API_KEY when building");
+            return null;
+        }
+
         // These two need to be declared outside the try/catch
         // so that they can be closed in the finally block.
         HttpURLConnection urlConnection = null;
@@ -80,15 +112,30 @@ public class FetchWeather extends AsyncTask<Void,Void,String>
 
         try
         {
-            // Construct the URL for the OpenWeatherMap query
-            // Possible parameters are avaiable at OWM's forecast API page, at
-            // http://openweathermap.org/API#forecast
-            URL url = new URL("http://api.openweathermap.org/data/2.5/forecast/daily?q=karachi&mode=json&units=metric&cnt=7");
+            // Construct the URL for the OpenWeatherMap 5 day / 3 hour forecast query
+            // (available on the free plan): https://openweathermap.org/forecast5
+            Uri uri = Uri.parse("https://api.openweathermap.org/data/2.5/forecast").buildUpon()
+                    .appendQueryParameter("q", CITY)
+                    .appendQueryParameter("mode", "json")
+                    .appendQueryParameter("units", "metric")
+                    .appendQueryParameter("appid", BuildConfig.OWM_API_KEY)
+                    .build();
+            URL url = new URL(uri.toString());
 
             // Create the request to OpenWeatherMap, and open the connection
             urlConnection = (HttpURLConnection) url.openConnection();
             urlConnection.setRequestMethod("GET");
+            urlConnection.setConnectTimeout(15000);
+            urlConnection.setReadTimeout(15000);
             urlConnection.connect();
+
+            int responseCode = urlConnection.getResponseCode();
+            if (responseCode != HttpURLConnection.HTTP_OK)
+            {
+                // e.g. 401 for a missing/invalid key, 404 for an unknown city
+                Log.e(LOG_TAG, "OpenWeatherMap returned HTTP " + responseCode);
+                return null;
+            }
 
             // Read the input stream into a String
 
@@ -118,7 +165,7 @@ public class FetchWeather extends AsyncTask<Void,Void,String>
             forecastJsonStr = buffer.toString();
         } catch (IOException e)
         {
-            Log.e("PlaceholderFragment", "Error ", e);
+            Log.e(LOG_TAG, "Error ", e);
             // If the code didn't successfully get the weather data, there's no point in attemping
             // to parse it.
             return null;
@@ -135,7 +182,7 @@ public class FetchWeather extends AsyncTask<Void,Void,String>
                     reader.close();
                 } catch (final IOException e)
                 {
-                    Log.e("PlaceholderFragment", "Error closing stream", e);
+                    Log.e(LOG_TAG, "Error closing stream", e);
                 }
             }
         }
